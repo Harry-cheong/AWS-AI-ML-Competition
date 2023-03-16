@@ -13,14 +13,15 @@ import matplotlib as mpl
 from imageio import imread
 import base64
 
-
 def Text(test):
     #Assessing the Text
-    detected_pii_labels = comprehend.contains_pii_entities(Text=data, LanguageCode='en')
+    detected_pii_labels = comprehend.contains_pii_entities(Text=test, LanguageCode='en')
 
     results = json.dumps(detected_pii_labels, sort_keys=True, indent=4)
 
-    if "\"Name\":" in results: #Condition for detection
+    if "CREDIT_DEBIT_NUMBER" in results: #Condition for detection
+        print("Sensitive Info Found in Text")
+    elif "ADDRESS" in results:
         print("Sensitive Info Found in Text")
     else:
         print("No Sensitive Info in Text")
@@ -54,30 +55,34 @@ def image(direct):
         totaloffsets=len(offsetarray)
     
     #Detect PII in image
-    pii_boxes_list=[]
-    piilist=comprehend.detect_pii_entities(Text = textblock, LanguageCode='en')
-    pii_detection_threshold = 0.00
-    
-    not_redacted=0
-    for pii in piilist['Entities']:
-        if pii['Score'] > pii_detection_threshold:
-            for i in range(0,totaloffsets-1):
-                if offsetarray[i] <= pii['BeginOffset'] < offsetarray[i+1]:
-                    if textDetections[i]['Geometry']['BoundingBox'] not in pii_boxes_list:
-                        pii_boxes_list.append(textDetections[i]['Geometry']['BoundingBox'])
+    if len(textblock) > 0:
+        pii_boxes_list=[]
+        piilist=comprehend.detect_pii_entities(Text = textblock, LanguageCode='en')
+        pii_detection_threshold = 0.00
+
+        not_redacted=0
+        for pii in piilist['Entities']:
+            if pii['Score'] > pii_detection_threshold:
+                for i in range(0,totaloffsets-1):
+                    if offsetarray[i] <= pii['BeginOffset'] < offsetarray[i+1]:
+                        if textDetections[i]['Geometry']['BoundingBox'] not in pii_boxes_list:
+                            pii_boxes_list.append(textDetections[i]['Geometry']['BoundingBox'])
+            else:
+                not_redacted+=1
+
+        pii_boxes_list.append(textDetections[3]['Geometry']['BoundingBox'])
+        pii_boxes_list.append(textDetections[4]['Geometry']['BoundingBox'])
+        pii_boxes_list.append(textDetections[10]['Geometry']['BoundingBox'])
+
+        #print ("Found", len(pii_boxes_list), "text boxes to redact.")
+
+        if len(pii_boxes_list) > 0: 
+            print("Sensitive Info Found in Image")
         else:
-            not_redacted+=1
-            
-    pii_boxes_list.append(textDetections[3]['Geometry']['BoundingBox'])
-    pii_boxes_list.append(textDetections[4]['Geometry']['BoundingBox'])
-    pii_boxes_list.append(textDetections[10]['Geometry']['BoundingBox'])
-    
-    if len(pii_boxes_list) > 0: 
-        print("Sensitive Info Found in Image")
+            print("No Sensitive Info in Image")
     else:
         print("No Sensitive Info in Image")
     
-
 # Implement AWS Services
 role = get_execution_role()
 region = boto3.Session().region_name
@@ -100,3 +105,4 @@ elif file_dir.endswith('.png'):
 else:
     print("File Type Not Supported")
     
+
