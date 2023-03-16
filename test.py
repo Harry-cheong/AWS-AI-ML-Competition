@@ -1,7 +1,7 @@
 import hashlib
 import pickle
 import pandas as pd
-
+import requests
 #hash function
 def md5hash(filepath):
     with open(filepath, 'rb') as f:
@@ -36,3 +36,21 @@ try:
 except ValueError:
     print('file is not malicious ')
 
+
+print('VirusTotal Verification')
+
+def lookup_hash(hash_value, api_key):
+    url = f"https://www.virustotal.com/vtapi/v2/file/report?apikey={api_key}&resource={hash_value}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        result = response.json()
+        if result["response_code"] == 0:
+            print(f"file not found in VirusTotal database.")
+        elif result["positives"] == 0:
+            print(f"file is not malicious according to VirusTotal.")
+        else:
+            print(f"file is malicious according to VirusTotal.")
+    else:
+        print("Error fetching data from VirusTotal.")
+
+lookup_hash(test_hash,'0ce5cb0b16c6be24b31ce39653359444dd3a3a761ba0d7f29ad3bc67e226f69a')
